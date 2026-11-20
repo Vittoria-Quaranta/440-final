@@ -1,0 +1,23 @@
+[project]
+name = "440-final"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "VittoriaQuaranta", email = "vittoria20606@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.5",
+]
+
+[project.scripts]
+440-final = "_440_final:main"
+
+[tool.uv.build-backend]
+module-name = "_440_final"
+
+[build-system]
+requires = ["uv_build>=0.13.9,<0.14.0"]
+build-backend = "uv_build"
