@@ -6,7 +6,6 @@ This Python script reads a `.wav` audio file and converts its waveform into an a
 ## Features
 - Opens a file picker to select a `.wav` file.
 - Reads audio data and extracts individual samples.
-- Converts audio amplitudes into normalized values between -1 and 1.
 - Supports mono and stereo audio (stereo is averaged into mono).
 - Allows downsampling to reduce the number of data points.
 - Plots the resulting waveform using Matplotlib.
@@ -15,7 +14,7 @@ This Python script reads a `.wav` audio file and converts its waveform into an a
 The parser returns a NumPy array containing two columns:
 
 - **Column 1:** Time in seconds.
-- **Column 2:** Normalized audio amplitude.
+- **Column 2:** Audio amplitude (not normalized).
 
 Each row represents one point in the audio waveform.
 
