@@ -1,8 +1,9 @@
-
+import sys
 import wave
-import numpy as np
-import matplotlib.pyplot as plt
 from tkinter import Tk, filedialog
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def wav_to_points(file_path, downsample=1):
@@ -60,8 +61,7 @@ def wav_to_points(file_path, downsample=1):
 
     return points
 
-
-if __name__ == "__main__":
+def main():
 
     # Open file selection window
     root = Tk()
@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     if not file_path:
         print("No file selected.")
-        exit()
+        sys.exit()
 
     # Parse selected audio file
     points = wav_to_points(file_path, downsample=10)
