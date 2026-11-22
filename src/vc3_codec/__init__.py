@@ -1,90 +1,46 @@
 import sys
-import wave
-from tkinter import Tk, filedialog
 
-import matplotlib.pyplot as plt
 import numpy as np
 
+from vc3_codec.compression import compress, decompress
+from vc3_codec.numerical_analysis import decode_residuals, encode_residuals
+from vc3_codec.vc3 import read_vc3, write_vc3
+from vc3_codec.wav import read_wav, write_wav
 
-def wav_to_points(file_path, downsample=1):
-    """
-    Parse a WAV file into an array of (time, amplitude) points.
 
-    Args:
-        file_path: Path to the .wav file
-        downsample: Keep every Nth sample to reduce array size
+def wav_to_vc3(source: str, destination: str):
+    header, audios = read_wav(source)
+    seeds = np.empty((header.n_channels, 5), dtype=np.int64)
+    residualss = []
+    for i in range(header.n_channels):
+        seed, residuals = encode_residuals(audios[:, i])
+        seeds[i] = seed
+        residualss.append(residuals)
+    residualss = np.concatenate(residualss)
+    packed = compress(residualss, header.samp_width)
+    write_vc3(destination, header, seeds, packed)
 
-    Returns:
-        points: NumPy array of shape (N, 2)
-                Column 0 = time (seconds)
-                Column 1 = raw amplitude (integer sample values, not normalized)
-    """
+def vc3_to_wav(source: str, destination: str):
+    result = read_vc3(source)
+    if result is None:
+        return
+    header, seeds, packed = result
+    residualss = decompress(packed, header.samp_width)
+    n_residual = max(header.n_frames - 5, 0)
+    audios = np.empty((header.n_frames, header.n_channels), dtype=np.int64)
+    for i in range(header.n_channels):
+        residuals = residualss[i*n_residual : (i+1)*n_residual]
+        audios[:, i] = decode_residuals(seeds[i], residuals)[:header.n_frames]
+    write_wav(destination, header, audios)
 
-    with wave.open(file_path, "rb") as wav:
-        sample_rate = wav.getframerate()
-        num_frames = wav.getnframes()
-        num_channels = wav.getnchannels()
-        sample_width = wav.getsampwidth()
+def encode():
+    if len(sys.argv) != 3:
+        print("bad args; need input.wav output.vc3")
+        return
+    wav_to_vc3(sys.argv[1], sys.argv[2])
 
-        audio_data = wav.readframes(num_frames)
-
-    # Convert raw bytes into numerical samples (no normalization)
-    if sample_width == 1:
-        # 8-bit WAV is unsigned (0-255); shift to be centered on 0
-        audio = np.frombuffer(audio_data, dtype=np.uint8).astype(np.int16) - 128
-
-    elif sample_width == 2:
-        audio = np.frombuffer(audio_data, dtype=np.int16)
-
-    elif sample_width == 4:
-        audio = np.frombuffer(audio_data, dtype=np.int32)
-
-    else:
-        raise ValueError("Unsupported WAV sample width")
-
-    # Reshape stereo/multichannel audio
-    audio = audio.reshape(-1, num_channels)
-
-    # Convert to mono by averaging channels
-    audio = audio.mean(axis=1)
-
-    # Downsample
-    audio = audio[::downsample]
-
-    # Generate time values
-    times = np.arange(len(audio)) * downsample / sample_rate
-
-    # Combine time and amplitude into points
-    points = np.column_stack((times, audio))
-
-    return points
-
-def main():
-
-    # Open file selection window
-    root = Tk()
-    root.withdraw()
-
-    file_path = filedialog.askopenfilename(
-        title="Select a WAV audio file",
-        filetypes=[("WAV files", "*.wav")]
-    )
-
-    root.destroy()
-
-    if not file_path:
-        print("No file selected.")
-        sys.exit()
-
-    # Parse selected audio file
-    points = wav_to_points(file_path, downsample=10)
-
-    print("Number of points:", len(points))
-    print(points[:10])
-
-    # Plot waveform
-    plt.plot(points[:, 0], points[:, 1])
-    plt.xlabel("Time (seconds)")
-    plt.ylabel("Amplitude (raw sample value)")
-    plt.title("Audio Waveform")
-    plt.show()
+def decode():
+    if len(sys.argv) != 3:
+        print("bad args; need input.vc3 output.wav")
+        return
+    vc3_to_wav(sys.argv[1], sys.argv[2])
